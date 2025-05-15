@@ -78,140 +78,146 @@ Instructions to install Ansible on your control node.
     ansible --version
     ```
 
-## Modules
+# Ansible System Modules: Core Management Tools
 
-Pre-built tools that perform specific tasks on managed nodes (e.g., installing packages, managing services).
+Ansible's power comes from its **modules**, which are pre-built tools designed to automate specific tasks on your managed systems. They abstract away the underlying commands needed for different operating systems, providing a consistent way to manage your infrastructure.
 
-**Example:** Ensure Nginx is installed on web servers.
+## What are Ansible Modules?
+
+Ansible modules are self-contained pieces of code that Ansible executes on managed nodes. They take parameters that define the desired state or action and handle the complexities of interacting with the target system to achieve that state. Modules are designed to be idempotent, meaning running them multiple times will always result in the same system state.
+
+## Use of Modules
+
+Modules are the fundamental building blocks of Ansible playbooks. They allow you to:
+
+* **Automate repetitive tasks:** Configure systems, install software, manage services consistently across many machines.
+* **Ensure desired state:** Define the exact configuration you want for your systems, and Ansible will ensure they are in that state.
+* **Work across different operating systems:** Modules handle the differences between Linux distributions (like Debian, Red Hat, etc.) and other systems.
+* **Simplify automation:** You don't need to write complex shell scripts; modules provide a higher-level, more structured way to manage systems.
+
+## Individual System Modules and Examples
+
+Here are the system modules you listed with explanations and examples of their use in a playbook:
 
 ```yaml
-- name: Ensure nginx is installed
-  hosts: webservers
-  become: yes
+---
+- name: Examples of Core System Modules
+  hosts: all
+  become: yes  # For tasks requiring root privileges
+
   tasks:
-    - name: Install nginx package
+    - name: Use the 'yum' module (for Red Hat/CentOS/Fedora)
+      yum:
+        name: httpd
+        state: present
+      # Ensures the 'httpd' (Apache) package is installed.
+
+    - name: Use the 'apt' module (for Debian/Ubuntu)
       apt:
         name: nginx
-        state: present
+        state: latest
+      # Ensures the 'nginx' package is installed and is the latest available version.
 
-Variables
-Placeholders for dynamic values, making automation flexible. Defined in inventory, playbooks, or variable files. Accessed using Jinja2 ({{ variable_name }}).
-Example: Define and use a variable for the HTTP port.
- * Inventory (hosts):
-   [webservers]
-server1.example.com http_port=80
-server2.example.com http_port=81
+    - name: Use the 'dnf' module (for Fedora/CentOS 8+)
+      dnf:
+        name: mariadb-server
+        state: absent
+      # Ensures the 'mariadb-server' package is removed.
 
- * Playbook:
-   - name: Configure web servers
-  hosts: webservers
-  become: yes
-  tasks:
-    - name: Ensure nginx is listening on the correct port
-      lineinfile:
-        path: /etc/nginx/sites-available/default
-        regexp: '^listen '
-        line: "listen {{ http_port }} default_server;"
-      notify: restart nginx
-
-  handlers:
-    - name: restart nginx
-      service:
-        name: nginx
-        state: restarted
-
-Roles
-A structured way to organize and reuse Ansible content (tasks, handlers, variables, templates).
-Example: A basic role structure for setting up a web server.
-roles/
-└── webserver_setup/
-    ├── tasks/
-    │   └── main.yml
-    ├── handlers/
-    │   └── main.yml
-    ├── vars/
-    │   └── main.yml
-    └── templates/
-        └── index.html.j2
-
-Using the role in a playbook:
----
-- name: Deploy web server
-  hosts: webservers
-  become: yes
-  roles:
-    - webserver_setup
-
-Basic Example: Hosting an HTML File on Nginx Port 80
-A simple playbook to install Nginx and host an index.html file on port 80.
- * Inventory (hosts):
-   [webservers]
-your_server_ip_or_hostname
-
- * index.html:
-   <!DOCTYPE html>
-<html>
-<head>
-    <title>My Ansible Hosted Page</title>
-</head>
-<body>
-    <h1>This page is served by Nginx, configured by Ansible!</h1>
-</body>
-</html>
-
- * Playbook (deploy_website.yml):
-   ---
-- name: Install Nginx and deploy a basic website
-  hosts: webservers
-  become: yes
-  vars:
-    http_port: 80
-    document_root: /var/www/html
-
-  tasks:
-    - name: Ensure Nginx is installed
+    - name: Use the 'package' module (generic package management)
       package:
-        name: nginx
-        state: present
+        name: curl
+        state: installed
+      # A more generic module that tries to use the appropriate package manager
+      # for the target system (e.g., apt, yum, dnf). 'installed' is similar to 'present'.
 
-    - name: Create document root directory
-      file:
-        path: "{{ document_root }}"
-        state: directory
-        owner: root
-        group: root
-        mode: '0755'
+    - name: Use the 'service' module (manage system services)
+      service:
+        name: firewalld
+        state: stopped
+        enabled: no
+      # Stops the 'firewalld' service and disables it from starting on boot.
+      # Other common states include 'started', 'restarted', 'reloaded'.
 
-    - name: Copy index.html file to the server
+    - name: Use the 'copy' module (copy files to managed nodes)
       copy:
-        src: index.html
-        dest: "{{ document_root }}/index.html"
+        src: /tmp/local_config.txt
+        dest: /etc/remote_config.txt
         owner: root
         group: root
         mode: '0644'
+      # Copies the file '/tmp/local_config.txt' from the control node
+      # to '/etc/remote_config.txt' on the managed node, setting ownership and permissions.
 
-    - name: Ensure Nginx is configured to listen on port {{ http_port }}
-      lineinfile:
-        path: /etc/nginx/sites-available/default
-        regexp: '^listen '
-        line: "listen {{ http_port }} default_server;"
-      notify: restart nginx
-
-    - name: Enable the default site
+    - name: Use the 'file' module (manage files and directories)
       file:
-        src: /etc/nginx/sites-available/default
-        dest: /etc/nginx/sites-enabled/default
-        state: link
-      notify: restart nginx
+        path: /opt/new_directory
+        state: directory
+        owner: ansible
+        group: ansible
+        mode: '0755'
+      # Creates the directory '/opt/new_directory' if it doesn't exist,
+      # setting the owner, group, and permissions.
+      # Other states include 'file' (creates an empty file), 'absent' (removes), 'touch'.
 
-    - name: Ensure Nginx service is running and enabled
-      service:
-        name: nginx
-        state: started
-        enabled: yes
+    - name: Use the 'ping' module (check host reachability)
+      ping:
+      # Sends a test ping to the managed nodes to verify they are reachab
 
-  handlers:
-    - name: restart nginx
-      service:
-        name: nginx
-        state: restarted
+# Ansible Variables in YAML: A Concise Guide
+
+Variables are key to making your Ansible playbooks dynamic and reusable. This guide demonstrates how to define and use variables within Ansible using YAML syntax, both directly in playbooks and in separate files.
+
+## Defining Variables Directly in a Playbook (YAML)
+
+For simple, playbook-specific configurations, you can define variables right within the `vars` section of your playbook.
+
+```yaml
+---
+- name: Simple variable example in a playbook
+  hosts: all
+  vars:
+    server_name: "webserver-prod-01"
+    http_port: 80
+
+  tasks:
+    - name: Output the server name
+      debug:
+        msg: "Configuring server: {{ server_name }}"
+
+    - name: Set the HTTP port
+      debug:
+        msg: "HTTP port will be: {{ http_port }}"
+
+To run this playbook (e.g., server_config.yaml), execute:
+ansible-playbook server_config.yaml
+
+Storing Variables in Separate YAML Files (Vars Files)
+For better organization, especially when you have variables that might be used across multiple playbooks, you can store them in external YAML files (like web_packages.yaml).
+Example of a Vars File (web_packages.yaml):
+apache_package: httpd
+
+To use this external variable, reference the vars file in your playbook using the vars_files directive:
+---
+- name: Example using an external vars file
+  hosts: webservers
+  vars_files:
+    - web_packages.yaml
+
+  tasks:
+    - name: Ensure Apache is installed
+      package:
+        name: "{{ apache_package }}"
+        state: present
+
+To run this playbook (e.g., install_apache.yaml) that uses web_packages.yaml, simply run:
+ansible-playbook install_apache.yaml
+
+Ansible will automatically load the variable apache_package from the specified file. You can also explicitly specify the vars file using the --vars-file option:
+ansible-playbook install_apache.yaml --vars-file web_packages.yaml
+
+
+Roles
+
+        
+
