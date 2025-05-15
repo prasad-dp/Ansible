@@ -164,7 +164,7 @@ Here are the system modules you listed with explanations and examples of their u
       ping:
       # Sends a test ping to the managed nodes to verify they are reachab
 
-# Ansible Variables in YAML: A Concise Guide
+##Ansible Variables in YAML: A Concise Guide
 
 Variables are key to making your Ansible playbooks dynamic and reusable. This guide demonstrates how to define and use variables within Ansible using YAML syntax, both directly in playbooks and in separate files.
 
