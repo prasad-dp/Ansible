@@ -1229,7 +1229,7 @@ Tasks can notify:
 ```yaml
 notify: restart_nginx
 ```
-Here’s the next section, fully formatted for **README.md** with beginner-friendly explanations and examples.
+
 
 ---
 
